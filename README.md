@@ -11,9 +11,13 @@ flashed, and the phone's Android is untouched.
 
 <sub>The phone's own screen (captured from its framebuffer): waiting for a model, receiving one over USB, ready.</sub>
 
-| Chat in the PC browser (Qwen2.5 Coder 0.5B, real time) | Chat from a mobile over Wi-Fi (Gemma 3 1B, real time) |
-|---|---|
-| <img src="docs/media/pc-chat.gif" alt="Asking for a Python Fibonacci function in the web chat; the answer streams at about 9.5 tokens/s"> | <p align="center"><img src="docs/media/mobile-chat.gif" width="260" alt="The same web chat on a phone-sized screen, answered by Gemma 3 1B at about 5 tokens/s"></p> |
+**Chat in the PC browser** (Qwen2.5 Coder 0.5B on the phone, real time, ~9.5 tokens/s):
+
+<p align="center"><img src="docs/media/pc-chat.gif" width="760" alt="Asking for a Python Fibonacci function in the web chat; the answer streams at about 9.5 tokens/s"></p>
+
+**Chat from a mobile over Wi-Fi** (Gemma 3 1B on the phone, real time, ~5 tokens/s):
+
+<p align="center"><img src="docs/media/mobile-chat.gif" width="300" alt="The same web chat on a phone-sized screen, answered by Gemma 3 1B at about 5 tokens/s"></p>
 
 **Loading a model** from the PC app (Ollama models on the PC → the phone, over USB):
 
