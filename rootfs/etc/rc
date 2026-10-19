@@ -1,0 +1,34 @@
+#!/bin/sh
+# One-time boot setup, run by busybox init before the services start.
+/bin/busybox --install -s /bin
+export PATH=/bin
+
+mkdir -p /proc /sys /dev /tmp /run
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
+# The model lives here: llama.cpp mmaps it straight from tmpfs, no second copy.
+mount -t tmpfs -o size=85%,mode=1777 tmpfs /tmp
+mount -t tmpfs tmpfs /run
+mount -t pstore pstore /sys/fs/pstore 2>/dev/null
+hostname nexus5x-llm
+# 3.10 lacks clone3 (glibc falls back to clone) and logs a register dump per
+# unknown syscall; this sysctl silences those dumps.
+echo 0 > /proc/sys/debug/exception-trace
+ifconfig lo 127.0.0.1 up
+
+# Previous crash log (pstore RAM) survives a warm reboot: keep a copy.
+[ -f /sys/fs/pstore/console-ramoops ] && cp /sys/fs/pstore/console-ramoops /tmp/last-kmsg
+
+# USB first: if the CPU setup ever hangs the phone, the link shows it got this far.
+sh /etc/llm-usb.sh > /tmp/llm-usb.log 2>&1
+sh /etc/llm-cpu.sh > /tmp/llm-cpu.log 2>&1
+
+# QEMU test (scripts/run-qemu.sh): model from the virtio disk, shell on the console.
+if [ -n "$MODEL_SIZE" ] && [ -b /dev/vda ]; then
+	head -c "$MODEL_SIZE" /dev/vda > /tmp/model.gguf
+fi
+if [ -c /dev/hvc0 ]; then
+	setsid sh -c 'while :; do setsid -c sh -l </dev/hvc0 >/dev/hvc0 2>&1; done' &
+fi

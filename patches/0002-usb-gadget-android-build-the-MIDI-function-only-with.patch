@@ -1,0 +1,55 @@
+From 1420cdfeb1b78d05efbafb2e27416a0f878575f2 Mon Sep 17 00:00:00 2001
+From: kk <kaiwalya.khasnis57@gmail.com>
+Date: Mon, 19 Oct 2026 13:13:25 +0900
+Subject: [PATCH 2/4] usb: gadget: android: build the MIDI function only with
+ CONFIG_SND_RAWMIDI
+
+f_midi.c is included and registered unconditionally, so a kernel without
+ALSA fails to link (snd_card_create, snd_rawmidi_* undefined).
+---
+ drivers/usb/gadget/android.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/usb/gadget/android.c b/drivers/usb/gadget/android.c
+index 7784148f..64e23e91 100644
+--- a/drivers/usb/gadget/android.c
++++ b/drivers/usb/gadget/android.c
+@@ -40,7 +40,9 @@
+ #ifdef CONFIG_SND_PCM
+ #include "f_audio_source.c"
+ #endif
++#ifdef CONFIG_SND_RAWMIDI
+ #include "f_midi.c"
++#endif
+ #include "f_mass_storage.c"
+ #define USB_ETH_RNDIS y
+ #include "f_diag.c"
+@@ -2857,6 +2859,7 @@ static struct android_usb_function uasp_function = {
+ 	.bind_config	= uasp_function_bind_config,
+ };
+ 
++#ifdef CONFIG_SND_RAWMIDI
+ static int midi_function_init(struct android_usb_function *f,
+ 					struct usb_composite_dev *cdev)
+ {
+@@ -2910,6 +2913,7 @@ static struct android_usb_function midi_function = {
+ 	.bind_config	= midi_function_bind_config,
+ 	.attributes	= midi_function_attributes,
+ };
++#endif
+ 
+ static struct android_usb_function *supported_functions[] = {
+ 	&ffs_function,
+@@ -2937,7 +2941,9 @@ static struct android_usb_function *supported_functions[] = {
+ #ifdef CONFIG_SND_PCM
+ 	&audio_source_function,
+ #endif
++#ifdef CONFIG_SND_RAWMIDI
+ 	&midi_function,
++#endif
+ 	&uasp_function,
+ 	&charger_function,
+ 	NULL
+-- 
+2.43.0
+

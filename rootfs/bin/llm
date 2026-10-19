@@ -1,0 +1,13 @@
+#!/bin/sh
+# Chat in the telnet shell with llama cli. It maps the same /tmp/model.gguf pages as the server.
+#   llm                 interactive chat
+#   llm bench [args]    llama-bench on the loaded model
+. /etc/llm.conf; [ -f /tmp/llm.conf ] && . /tmp/llm.conf
+M=/tmp/model.gguf
+[ -s $M ] || { echo "no model: run scripts/send-model.sh on the PC"; exit 1; }
+PIN=; [ -n "$CPUS" ] && PIN="taskset -c $CPUS"
+if [ "$1" = bench ]; then
+	shift
+	exec $PIN llama bench -m $M -t "$THREADS" "$@"
+fi
+exec $PIN llama cli -m $M -t "$THREADS" -c "$CTX" "$@"

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Model daemon (respawned by init).
+#   port 9000: receive a GGUF model (PC: the Nexus 5X LLM app, or scripts/send-model.sh),
+#              then restart the server on it
+#   port 8080: llama serve (llama-server), OpenAI-style HTTP API and web chat
+# Settings: /etc/llm.conf, overridden by /tmp/llm.conf (then run llm-serve).
+M=/tmp/model.gguf
+PIDF=/run/llama-server.pid
+
+llm-serve
+while :; do
+	nc -l -p 9000 > /tmp/model.part &
+	NC=$!
+	# Two models don't fit in RAM: free the old one as soon as a new upload starts.
+	while kill -0 $NC 2>/dev/null; do
+		if [ -s /tmp/model.part ] && [ -e $M ]; then
+			llm-stop rm
+			echo "llmd: receiving a new model, old one freed"
+		fi
+		sleep 0.5
+	done
+	if [ "$(head -c 4 /tmp/model.part)" = GGUF ]; then
+		llm-stop rm
+		mv /tmp/model.part $M
+		echo "llmd: new model, $(wc -c < $M) bytes"
+		llm-serve
+	else
+		echo "llmd: upload is not a GGUF file, dropped"
+		rm -f /tmp/model.part
+	fi
+	# server died (bad model, OOM)? bring it back
+	[ -f $PIDF ] && kill -0 "$(cat $PIDF)" 2>/dev/null || llm-serve
+done

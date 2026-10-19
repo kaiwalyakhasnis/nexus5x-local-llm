@@ -1,0 +1,16 @@
+#!/bin/busybox sh
+# Boot probe (scripts/build-bootimg.sh probe): reaching userspace reboots the phone
+# into fastboot mode; a kernel that hangs ends in an apps watchdog bark and
+# Android instead. (pstore does not survive any reboot on bullhead, so no log.)
+B=/bin/busybox
+$B mkdir -p /proc /sys /dev
+$B mount -t proc proc /proc
+$B mount -t sysfs sysfs /sys
+$B mount -t devtmpfs devtmpfs /dev
+echo "LLM-PROBE: userspace reached" > /dev/kmsg
+for i in 1 2 3 4 5 6; do
+	$B sleep 1
+	echo "LLM-PROBE: alive $i s, $($B cat /proc/uptime)" > /dev/kmsg
+done
+echo "LLM-PROBE: rebooting" > /dev/kmsg
+/bin/llm-reboot bootloader

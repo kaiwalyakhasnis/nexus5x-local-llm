@@ -1,0 +1,2 @@
+export PATH=/bin
+export PS1='llm:\w# '

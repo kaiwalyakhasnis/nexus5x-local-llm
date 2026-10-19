@@ -1,0 +1,26 @@
+From e5d4f7f945284948e8f8552b204c8f909917c67b Mon Sep 17 00:00:00 2001
+From: kk <kaiwalya.khasnis57@gmail.com>
+Date: Mon, 19 Oct 2026 13:28:41 +0900
+Subject: [PATCH 4/4] regulator: dw8768: include linux/device.h
+
+of_regulator.h needs struct device declared; with a smaller config no
+earlier header pulls it in and the forbidden-warning check fails.
+---
+ drivers/regulator/dw8768-regulator.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/regulator/dw8768-regulator.c b/drivers/regulator/dw8768-regulator.c
+index 88f952cc..7bb99cea 100644
+--- a/drivers/regulator/dw8768-regulator.c
++++ b/drivers/regulator/dw8768-regulator.c
+@@ -16,6 +16,7 @@
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
++#include <linux/device.h>
+ #include <linux/regulator/of_regulator.h>
+ #include <linux/regulator/driver.h>
+ #include <linux/regulator/machine.h>
+-- 
+2.43.0
+

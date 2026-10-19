@@ -1,0 +1,17 @@
+#!/bin/sh
+# (Re)start llama-server on /tmp/model.gguf with the current settings
+# (/etc/llm.conf, then /tmp/llm.conf). Used by llmd; run it by hand after
+# changing /tmp/llm.conf.
+M=/tmp/model.gguf
+PIDF=/run/llama-server.pid
+llm-stop
+[ -s $M ] || { echo "llm-serve: no model yet"; exit 0; }
+. /etc/llm.conf; [ -f /tmp/llm.conf ] && . /tmp/llm.conf
+PIN=; [ -n "$CPUS" ] && PIN="taskset -c $CPUS"
+# the model's own name (GGUF metadata): the server's model id, and llm-ui shows it
+NAME=$(gguf-name $M); NAME=${NAME:-model}
+echo "$NAME" > /tmp/model.name
+echo "llm-serve: $M threads=$THREADS cpus=${CPUS:-any} ctx=$CTX"
+setsid $PIN llama serve -m $M --host 0.0.0.0 --port 8080 --alias "$NAME" \
+	-t "$THREADS" -c "$CTX" $SERVER_ARGS > /tmp/llama-server.log 2>&1 < /dev/null &
+echo $! > $PIDF

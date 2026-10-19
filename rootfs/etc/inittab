@@ -1,0 +1,7 @@
+# busybox init (PID 1): one-time setup, then the services it keeps alive.
+::sysinit:/bin/busybox sh /etc/rc
+::respawn:/bin/llmd
+::respawn:/bin/llm-ui
+::respawn:/bin/telnetd -F -l /bin/sh
+::restart:/bin/init
+::ctrlaltdel:/bin/reboot

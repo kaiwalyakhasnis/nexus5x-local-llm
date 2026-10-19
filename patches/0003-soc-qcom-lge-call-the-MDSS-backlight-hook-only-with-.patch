@@ -1,0 +1,30 @@
+From e8d1cf86026f4df58ab64aabc4a3de7a4ce5aa44 Mon Sep 17 00:00:00 2001
+From: kk <kaiwalya.khasnis57@gmail.com>
+Date: Mon, 19 Oct 2026 13:13:25 +0900
+Subject: [PATCH 3/4] soc: qcom: lge: call the MDSS backlight hook only with
+ CONFIG_FB_MSM_MDSS
+
+androidboot.mode=charger hands backlight control to the panel driver;
+without the display driver, mdss_set_bl_ctrl_by_panel() does not exist.
+---
+ drivers/soc/qcom/lge/devices_lge.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/soc/qcom/lge/devices_lge.c b/drivers/soc/qcom/lge/devices_lge.c
+index 3cda19b6..05cc96bd 100644
+--- a/drivers/soc/qcom/lge/devices_lge.c
++++ b/drivers/soc/qcom/lge/devices_lge.c
+@@ -20,8 +20,10 @@
+ 
+ int __init lge_charger_mode_init(char *s)
+ {
++#ifdef CONFIG_FB_MSM_MDSS
+ 	if (!strcmp(s, "charger"))
+ 		mdss_set_bl_ctrl_by_panel(true);
++#endif
+ 
+ 	return 1;
+ }
+-- 
+2.43.0
+

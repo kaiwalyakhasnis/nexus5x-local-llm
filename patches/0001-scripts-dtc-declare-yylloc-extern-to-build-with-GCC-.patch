@@ -1,0 +1,39 @@
+From 5ede1bbac1b5325d257cf7c7f02f41f36254f059 Mon Sep 17 00:00:00 2001
+From: kk <kaiwalya.khasnis57@gmail.com>
+Date: Mon, 19 Oct 2026 12:39:55 +0900
+Subject: [PATCH 1/4] scripts/dtc: declare yylloc extern to build with GCC 10+
+
+---
+ scripts/dtc/dtc-lexer.lex.c_shipped | 2 +-
+ scripts/dtc/dtc-parser.y            | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/dtc/dtc-lexer.lex.c_shipped b/scripts/dtc/dtc-lexer.lex.c_shipped
+index 2d30f417..d0eb405c 100644
+--- a/scripts/dtc/dtc-lexer.lex.c_shipped
++++ b/scripts/dtc/dtc-lexer.lex.c_shipped
+@@ -637,7 +637,7 @@ char *yytext;
+ #include "srcpos.h"
+ #include "dtc-parser.tab.h"
+ 
+-YYLTYPE yylloc;
++extern YYLTYPE yylloc;
+ 
+ /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
+ #define	YY_USER_ACTION \
+diff --git a/scripts/dtc/dtc-parser.y b/scripts/dtc/dtc-parser.y
+index f412460f..24ca3eb4 100644
+--- a/scripts/dtc/dtc-parser.y
++++ b/scripts/dtc/dtc-parser.y
+@@ -24,7 +24,7 @@
+ #include "dtc.h"
+ #include "srcpos.h"
+ 
+-YYLTYPE yylloc;
++extern YYLTYPE yylloc;
+ 
+ extern int yylex(void);
+ extern void print_error(char const *fmt, ...);
+-- 
+2.43.0
+
