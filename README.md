@@ -86,8 +86,9 @@ You need:
 
 Steps:
 
-1. **Get the boot image**: download `nexus5x-llm-boot.img` from
-   [Releases](../../releases), or build it (see *Build from source*).
+1. **Get the boot image**: download the zip from
+   [Releases](https://github.com/kaiwalyakhasnis/nexus5x-local-llm/releases/latest)
+   (it holds `nexus5x-llm-boot.img`), or build it (see *Build from source*).
 2. **Boot it** (RAM only, nothing is flashed):
 
    ```sh
