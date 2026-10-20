@@ -7,6 +7,7 @@ set -e
 P=$(cd "$(dirname "$0")/.." && pwd)
 [ -f "$P/local.env" ] && . "$P/local.env"
 KOBJ=${KOBJ:-$P/out/kobj}
+case $KOBJ in /*) ;; *) KOBJ=$P/$KOBJ ;; esac
 S=$P/out/ramdisk
 
 rm -rf "$S" && mkdir -p "$S/bin"
@@ -17,7 +18,7 @@ if [ "$1" = probe ]; then
 	aarch64-linux-gnu-gcc -O2 -static -s -o "$S/bin/llm-reboot" "$P/tools/llm-reboot.c"
 	cp "$P/tools/probe/init" "$S/init" && chmod 755 "$S/init"
 else
-	OUT=$P/out/boot.img
+	OUT=${BOOTIMG:-$P/out/boot.img}
 	cp -a "$P/rootfs/." "$S/"
 	cp "$P/out/busybox/busybox" "$S/bin/busybox"
 	ln -s bin/busybox "$S/init"

@@ -11,6 +11,7 @@ mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
 # The model lives here: llama.cpp mmaps it straight from tmpfs, no second copy.
 mount -t tmpfs -o size=85%,mode=1777 tmpfs /tmp
 mount -t tmpfs tmpfs /run
+mkdir -p /tmp/www
 mount -t pstore pstore /sys/fs/pstore 2>/dev/null
 hostname nexus5x-llm
 # 3.10 lacks clone3 (glibc falls back to clone) and logs a register dump per

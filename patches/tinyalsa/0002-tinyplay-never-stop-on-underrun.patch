@@ -1,0 +1,23 @@
+diff --git a/utils/tinyplay.c b/utils/tinyplay.c
+index 4c7ccf6..9857449 100644
+--- a/utils/tinyplay.c
++++ b/utils/tinyplay.c
+@@ -27,6 +27,7 @@
+ */
+ 
+ #include <tinyalsa/asoundlib.h>
++#include <limits.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <stdint.h>
+@@ -322,7 +323,9 @@ int main(int argc, char **argv)
+     }
+ 
+     cmd.config.silence_threshold = cmd.config.period_size * cmd.config.period_count;
+-    cmd.config.stop_threshold = cmd.config.period_size * cmd.config.period_count;
++    /* Never stop on an underrun, as Android's audio HAL: msm-pcm-q6-v2 does not
++     * recover from the stop/restart. */
++    cmd.config.stop_threshold = INT_MAX;
+     cmd.config.start_threshold = cmd.config.period_size;
+ 
+     if (ctx_init(&ctx, &cmd) < 0) {

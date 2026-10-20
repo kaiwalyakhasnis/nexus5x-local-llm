@@ -10,4 +10,4 @@ if [ "$1" = bench ]; then
 	shift
 	exec $PIN llama bench -m $M -t "$THREADS" "$@"
 fi
-exec $PIN llama cli -m $M -t "$THREADS" -c "$CTX" "$@"
+exec $PIN llama cli -m $M -t "$THREADS" -c "${CTX:-4096}" "$@"   # small: it runs beside the server

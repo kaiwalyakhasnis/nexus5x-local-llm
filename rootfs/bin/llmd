@@ -1,7 +1,8 @@
 #!/bin/sh
 # Model daemon (respawned by init).
 #   port 9000: receive a GGUF model (PC: the Nexus 5X LLM app, or scripts/send-model.sh),
-#              then restart the server on it
+#              then restart the server on it; or the voice pack (a tar: whisper-cli,
+#              espeak-ng, the Whisper model), unpacked to /tmp/voice, then audio comes up
 #   port 8080: llama serve (llama-server), OpenAI-style HTTP API and web chat
 # Settings: /etc/llm.conf, overridden by /tmp/llm.conf (then run llm-serve).
 M=/tmp/model.gguf
@@ -11,9 +12,9 @@ llm-serve
 while :; do
 	nc -l -p 9000 > /tmp/model.part &
 	NC=$!
-	# Two models don't fit in RAM: free the old one as soon as a new upload starts.
+	# Two models don't fit in RAM: free the old one as soon as a new model starts arriving.
 	while kill -0 $NC 2>/dev/null; do
-		if [ -s /tmp/model.part ] && [ -e $M ]; then
+		if [ -e $M ] && [ "$(head -c 4 /tmp/model.part 2>/dev/null)" = GGUF ]; then
 			llm-stop rm
 			echo "llmd: receiving a new model, old one freed"
 		fi
@@ -24,8 +25,13 @@ while :; do
 		mv /tmp/model.part $M
 		echo "llmd: new model, $(wc -c < $M) bytes"
 		llm-serve
+	elif [ "$(dd if=/tmp/model.part bs=1 skip=257 count=5 2>/dev/null)" = ustar ]; then
+		rm -rf /tmp/voice && mkdir -p /tmp/voice
+		tar -xf /tmp/model.part -C /tmp/voice && echo "llmd: voice pack installed"
+		rm -f /tmp/model.part
+		sh /etc/llm-audio.sh
 	else
-		echo "llmd: upload is not a GGUF file, dropped"
+		echo "llmd: upload is neither a GGUF model nor the voice pack, dropped"
 		rm -f /tmp/model.part
 	fi
 	# server died (bad model, OOM)? bring it back

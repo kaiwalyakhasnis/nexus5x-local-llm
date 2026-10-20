@@ -85,6 +85,21 @@
   </section>
 
   <section class="card">
+    <h2>Voice on the phone</h2>
+    <div class="now">
+      <div class="grow">
+        <div id="voice-status">-</div>
+        <div id="voice-help" class="meta"></div>
+      </div>
+      <button id="voice-send" hidden></button>
+    </div>
+    <div id="voice" class="progress" hidden>
+      <div id="voice-text" class="meta"></div>
+      <div class="bar"><div id="voice-bar"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
     <h2>Models on this PC</h2>
     <div id="models"></div>
   </section>
@@ -178,6 +193,31 @@ function render(st) {
       : `${esc(up.display)} sent, the phone is loading it...`;
   }
 
+  // voice: the pack goes over automatically after each phone boot
+  const v = st.voice, vp = v.phone;
+  const vbusy = ["downloading", "sending", "starting"].includes(v.phase);
+  let vs, vc, help = "", button = "";
+  if (!p.online) [vs, vc] = ["-", "dim"];
+  else if (vp && vp.ready) {
+    [vs, vc] = [vp.busy ? "ready, working on a question" : "ready", "ok"];
+    help = "Hold VOLUME DOWN on the phone and speak; let go for the answer. " +
+      (vp.sound ? "Answers are spoken (VOLUME UP mutes)." : "Answers are shown, not spoken: VOLUME UP turns the sound on.");
+  } else if (vbusy) [vs, vc] = [{ downloading: "downloading the voice pack...", sending: "sending the voice pack...",
+                                  starting: "starting the phone's audio..." }[v.phase], "warn"];
+  else if (v.phase === "error") [vs, vc, button] = [v.error, "bad", "Try again"];
+  else if (!vp) [vs, vc] = ["this phone image has no voice chat", "dim"];
+  else if (v.pack) [vs, vc, button] = ["off: the voice pack is not on the phone yet", "dim", "Send voice pack"];
+  else [vs, vc, button] = ["off: no voice pack on this PC", "dim", "Download voice pack (53 MB)"];
+  if (!vp || !vp.ready) help = "Speech to text (Whisper tiny.en) and text to speech (eSpeak NG), all on the phone.";
+  $("voice-status").textContent = vs;
+  $("voice-status").className = vc;
+  $("voice-help").textContent = help;
+  $("voice-send").hidden = !button || !p.online;
+  $("voice-send").textContent = button;
+  $("voice").hidden = !vbusy || v.phase === "starting";
+  $("voice-bar").style.width = (v.total ? 100 * v.done / v.total : 0) + "%";
+  $("voice-text").textContent = v.total ? `${mb(v.done)} of ${mb(v.total)}` : "";
+
   // models on this PC
   if (changed("models", [st.models, p.model, busy])) {
     $("models").innerHTML = st.models.length ? st.models.map((m) => {
@@ -237,6 +277,7 @@ $("pull-form").addEventListener("submit", (e) => {
   const n = $("pull-name").value.trim();
   if (n) post("/api/pull", { name: n }).then(() => ($("pull-name").value = ""));
 });
+$("voice-send").addEventListener("click", () => post("/api/voice"));
 $("share").addEventListener("change", (e) => post("/api/share", { on: e.target.checked }));
 $("quit").addEventListener("click", async () => {
   await post("/api/quit");

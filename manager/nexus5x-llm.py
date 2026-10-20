@@ -3,6 +3,8 @@
 
   - shows what the phone is running and opens its web chat
   - lists the Ollama models on this PC and loads one onto the phone (port 9000)
+  - sends the voice pack (speech in and out on the phone) after each phone boot;
+    it is built by scripts/build-voice.sh, or downloaded from the GitHub release
   - downloads more models through Ollama (starts `ollama serve` if needed)
   - shares the chat with the Wi-Fi network (this PC's port 8080 -> phone), with a QR code
 
@@ -24,6 +26,10 @@ OLLAMA = "http://127.0.0.1:11434"
 OLLAMA_BIN = shutil.which("ollama") or os.path.expanduser("~/.local/ollama/bin/ollama")
 MODELS = os.environ.get("OLLAMA_MODELS", os.path.expanduser("~/.ollama/models"))
 CONFIG = os.path.expanduser("~/.config/nexus5x-llm.json")
+# The voice pack: this repo's build, else the copy downloaded from the release.
+VOICE_BUILT = os.path.join(HERE, "..", "out", "voice-pack.tar")
+VOICE_DOWNLOADED = os.path.expanduser("~/.local/share/nexus5x-llm/voice-pack.tar")
+VOICE_URL = "https://github.com/kaiwalyakhasnis/nexus5x-local-llm/releases/latest/download/nexus5x-llm-voice-pack.tar"
 # The phone has 1.8 GB of RAM for the model file (tmpfs), its cache and the system.
 MAX_MODEL = 1_250_000_000
 
@@ -44,7 +50,12 @@ state = {
     "upload": None,   # {name, display, sent, total, phase: sending|loading|ready|error, error}
     "pull": None,     # {name, status, completed, total, phase: pulling|done|error, error, load}
     "share": {"on": False, "urls": [], "error": ""},
+    # phone: llm-ui's /voice.json ({ready, busy, sound}), None if not there;
+    # phase: idle | downloading | sending | starting | error
+    "voice": {"phone": None, "phase": "idle", "done": 0, "total": 0, "error": ""},
 }
+# The phone takes one upload at a time (llmd), models and the voice pack alike.
+send_lock = threading.Lock()
 
 
 def load_config():
@@ -136,6 +147,7 @@ def http_get(url, timeout=1.5):
 
 
 def poll_phone():
+    sent_voice = False  # this boot of the phone
     while True:
         p = {"online": False, "server": "offline", "model": ""}
         try:
@@ -149,9 +161,102 @@ def poll_phone():
             reason = getattr(e, "reason", e)
             if isinstance(reason, ConnectionRefusedError):  # phone is there, no server: no model
                 p.update(online=True, server="none")
+        voice = None
+        if p["online"]:
+            try:
+                voice = json.loads(http_get(f"http://{PHONE}:8081/voice.json")[1])
+            except (urllib.error.URLError, OSError, ValueError):
+                pass
         with lock:
             state["phone"] = p
+            state["voice"]["phone"] = voice
+            idle = state["voice"]["phase"] in ("idle", "error")
+        # after each boot the phone has no voice pack: send it once
+        if not p["online"]:
+            sent_voice = False
+        elif voice and not voice.get("ready") and not sent_voice and idle and voice_pack():
+            sent_voice = True
+            threading.Thread(target=send_voice, daemon=True).start()
         time.sleep(1.5)
+
+
+def connect_phone():
+    # llmd listens again once it has handled the previous upload (the voice pack's audio
+    # bring-up takes a few seconds)
+    for _ in range(60):
+        try:
+            return socket.create_connection((PHONE, 9000), timeout=10)
+        except ConnectionRefusedError:
+            time.sleep(1)
+    return socket.create_connection((PHONE, 9000), timeout=10)
+
+
+def send_file(path, progress):
+    with send_lock, connect_phone() as s, open(path, "rb") as f:
+        while True:
+            d = f.read(1 << 20)
+            if not d:
+                break
+            s.sendall(d)
+            progress(len(d))
+        s.shutdown(socket.SHUT_WR)
+        s.settimeout(30)
+        while s.recv(4096):  # the phone closes once it has everything
+            pass
+
+
+# ------------------------------------------------------------------ the voice pack
+
+def voice_pack():
+    for f in (os.environ.get("VOICE_PACK", ""), VOICE_BUILT, VOICE_DOWNLOADED):
+        if f and os.path.isfile(f):
+            return os.path.abspath(f)
+    return ""
+
+
+def download_voice():
+    v = state["voice"]
+    v.update(phase="downloading", done=0, total=0, error="")
+    try:
+        os.makedirs(os.path.dirname(VOICE_DOWNLOADED), exist_ok=True)
+        part = VOICE_DOWNLOADED + ".part"
+        with urllib.request.urlopen(VOICE_URL, timeout=30) as r, open(part, "wb") as o:
+            v["total"] = int(r.headers.get("Content-Length") or 0)
+            while True:
+                d = r.read(1 << 20)
+                if not d:
+                    break
+                o.write(d)
+                v["done"] += len(d)
+        os.replace(part, VOICE_DOWNLOADED)
+    except OSError as e:
+        v.update(phase="error", error=f"could not download the voice pack: {e}")
+        return
+    send_voice()
+
+
+def send_voice():
+    v = state["voice"]
+    f = voice_pack()
+    if not f:
+        v.update(phase="error", error="no voice pack on this PC")
+        return
+    v.update(phase="sending", done=0, total=os.path.getsize(f), error="")
+    try:
+        send_file(f, lambda n: v.update(done=v["done"] + n))
+    except OSError as e:
+        v.update(phase="error", error=f"could not send to the phone: {e}")
+        return
+    v["phase"] = "starting"  # the phone boots its audio DSP
+    deadline = time.time() + 90
+    while time.time() < deadline:
+        time.sleep(1.5)
+        with lock:
+            phone = state["voice"]["phone"]
+        if phone and phone.get("ready"):
+            v["phase"] = "idle"
+            return
+    v.update(phase="error", error="the phone did not bring up its audio")
 
 
 def upload(m):
@@ -159,17 +264,7 @@ def upload(m):
     with lock:
         state["upload"] = up
     try:
-        with socket.create_connection((PHONE, 9000), timeout=10) as s, open(m["blob"], "rb") as f:
-            while True:
-                d = f.read(1 << 20)
-                if not d:
-                    break
-                s.sendall(d)
-                up["sent"] += len(d)
-            s.shutdown(socket.SHUT_WR)
-            s.settimeout(30)
-            while s.recv(4096):  # the phone closes once it has everything
-                pass
+        send_file(m["blob"], lambda n: up.update(sent=up["sent"] + n))
         up["phase"] = "loading"
         deadline = time.time() + 240
         while time.time() < deadline:
@@ -335,6 +430,7 @@ class Handler(BaseHTTPRequestHandler):
             have = {m["name"] for m in models}
             with lock:
                 s = json.loads(json.dumps(state))
+            s["voice"]["pack"] = voice_pack()
             s.update(models=models, phone_ip=PHONE, max_model=MAX_MODEL,
                      suggested=[{"name": n, "size": mb * 1_000_000, "about": a}
                                 for n, mb, a in SUGGESTED if n not in have])
@@ -362,6 +458,10 @@ class Handler(BaseHTTPRequestHandler):
             if not name or busy("pull", ("pulling",)):
                 return self.send(409, {"error": "a download is already running"})
             threading.Thread(target=pull, args=(name, bool(req.get("load"))), daemon=True).start()
+        elif self.path == "/api/voice":  # send the voice pack (downloading it first if needed)
+            if state["voice"]["phase"] in ("downloading", "sending", "starting"):
+                return self.send(409, {"error": "already setting up voice"})
+            threading.Thread(target=send_voice if voice_pack() else download_voice, daemon=True).start()
         elif self.path == "/api/share":
             share(bool(req.get("on")))
             save_config(share=bool(req.get("on")))

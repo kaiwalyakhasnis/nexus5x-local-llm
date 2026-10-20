@@ -2,6 +2,9 @@
 # Fetch everything the build needs into kernel/ and out/ (both untracked):
 #   kernel/                 LineageOS's bullhead kernel (lineage-15.1, 3.10) + patches/ on branch local-llm
 #   out/src/llama.cpp       llama.cpp v0.7.0
+#   out/src/tinyalsa        tinyalsa v2.0.0 + patches/tinyalsa (llm-ui's voice chat)
+#   out/src/whisper.cpp     whisper.cpp v1.9.5 (voice pack: speech -> text)
+#   out/src/espeak-ng       espeak-ng 1.52.0 (voice pack: text -> speech)
 #   out/busybox/busybox     Ubuntu's static arm64 busybox 1.36.1
 #   out/venv                cmake + ninja for the llama.cpp build
 #   out/toolchains/...      GCC 4.9 for the kernel, from AOSP (skipped with LINEAGE= in local.env)
@@ -23,6 +26,14 @@ fi
 
 [ -d out/src/llama.cpp ] ||
 	git clone --depth 1 --branch v0.7.0 https://github.com/ggml-org/llama.cpp out/src/llama.cpp
+if [ ! -d out/src/tinyalsa ]; then
+	git clone --depth 1 --branch v2.0.0 https://github.com/tinyalsa/tinyalsa out/src/tinyalsa
+	git -C out/src/tinyalsa apply "$P"/patches/tinyalsa/*.patch
+fi
+[ -d out/src/whisper.cpp ] ||
+	git clone --depth 1 --branch v1.9.5 https://github.com/ggml-org/whisper.cpp out/src/whisper.cpp
+[ -d out/src/espeak-ng ] ||
+	git clone --depth 1 --branch 1.52.0 https://github.com/espeak-ng/espeak-ng out/src/espeak-ng
 
 if [ ! -x out/busybox/busybox ]; then
 	mkdir -p out/downloads out/busybox

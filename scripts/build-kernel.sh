@@ -4,6 +4,7 @@
 # Usage: scripts/build-kernel.sh                 (incremental Image.gz-dtb)
 #        scripts/build-kernel.sh menuconfig      (edit out/kobj/.config)
 #        FRAG=config/stock.config KOBJ=out/kobj-stock scripts/build-kernel.sh   (baseline)
+#        FRAG=config/local-llm.config KOBJ=out/kobj-noaudio scripts/build-kernel.sh   (no mic/speaker)
 # The PC runs hot: default -j4, override with JOBS=n.
 set -e
 P=$(cd "$(dirname "$0")/.." && pwd)
@@ -15,14 +16,20 @@ else
 	KCROSS=${KCROSS:-$P/out/toolchains/aarch64-linux-android-4.9/bin/aarch64-linux-android-}
 fi
 KOBJ=${KOBJ:-$P/out/kobj}
-FRAG=${FRAG:-$P/config/local-llm.config}
+case $KOBJ in /*) ;; *) KOBJ=$P/$KOBJ ;; esac
+FRAG=${FRAG:-config/local-llm.config config/audio.config}   # one or more fragments, merged in order
+FRAGS=
+for f in $FRAG; do case $f in /*) FRAGS="$FRAGS $f" ;; *) FRAGS="$FRAGS $P/$f" ;; esac; done
+stale=0
+[ -f "$KOBJ/.config" ] || stale=1
+for f in $FRAGS; do [ "$f" -nt "$KOBJ/.config" ] && stale=1; done
 [ -x "${KCROSS}gcc" ] || { echo "no kernel compiler at ${KCROSS}gcc (run scripts/fetch-sources.sh, or set LINEAGE= or KCROSS=)" >&2; exit 1; }
 mkdir -p "$KOBJ"
 MK="make -C $P/kernel O=$KOBJ ARCH=arm64 CROSS_COMPILE=$KCROSS"
 # lineageos_bullhead_defconfig + config/local-llm.config -> out/kobj/.config (redone when the fragment changes)
-if [ ! -f "$KOBJ/.config" ] || [ "$FRAG" -nt "$KOBJ/.config" ]; then
+if [ $stale = 1 ]; then
 	$MK lineageos_bullhead_defconfig
-	(cd "$KOBJ" && ARCH=arm64 "$P/kernel/scripts/kconfig/merge_config.sh" -m -O "$KOBJ" .config "$FRAG")
+	(cd "$KOBJ" && ARCH=arm64 "$P/kernel/scripts/kconfig/merge_config.sh" -m -O "$KOBJ" .config $FRAGS)
 	$MK olddefconfig
 fi
 $MK -j"${JOBS:-4}" "${@:-Image.gz-dtb}"

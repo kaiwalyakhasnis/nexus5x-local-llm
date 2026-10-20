@@ -1,12 +1,13 @@
 /* gguf-name model.gguf: print a short display name for a GGUF model, from its
  * own metadata (general.name, or general.basename + general.size_label when
  * the name is long), e.g. "Google Gemma 3 1b It", "Qwen2.5 Coder 0.5B Instruct".
- * llm-serve uses it for the server's model id and /tmp/model.name (the screen). */
+ * llm-serve uses it for the server's model id and /tmp/model.name (the screen).
+ * gguf-name -c model.gguf: print the context length the model was trained with. */
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-enum { T_STRING = 8, T_ARRAY = 9 };
+enum { T_UINT32 = 4, T_STRING = 8, T_ARRAY = 9, T_UINT64 = 10 };
 static const int type_size[13] = {1, 1, 2, 2, 4, 4, 4, 1, 0, 0, 8, 8, 8};
 
 static FILE *f;
@@ -46,7 +47,9 @@ int main(int argc, char **argv)
 {
 	char magic[4], key[256], name[128] = "", base[64] = "", size[32] = "";
 	uint32_t ver;
-	uint64_t ntensors, nkv;
+	uint64_t ntensors, nkv, ctx = 0;
+	int want_ctx = argc > 2 && !strcmp(argv[1], "-c");
+	if (want_ctx) argv++;
 	if (argc < 2 || !(f = fopen(argv[1], "rb"))) return 1;
 	if (!rd(magic, 4) || memcmp(magic, "GGUF", 4) || !rd(&ver, 4) || ver < 2 ||
 	    !rd(&ntensors, 8) || !rd(&nkv, 8))
@@ -58,11 +61,21 @@ int main(int argc, char **argv)
 			    !strcmp(key, "general.basename") ? base :
 			    !strcmp(key, "general.size_label") ? size : NULL;
 		size_t cap = dst == name ? sizeof(name) : dst == base ? sizeof(base) : sizeof(size);
-		if (dst && t == T_STRING) {
+		size_t kl = strlen(key);
+		if (kl > 15 && !strcmp(key + kl - 15, ".context_length") && (t == T_UINT32 || t == T_UINT64)) {
+			uint32_t v32;
+			if (t == T_UINT32 ? !rd(&v32, 4) : !rd(&ctx, 8)) break;
+			if (t == T_UINT32) ctx = v32;
+		} else if (dst && t == T_STRING) {
 			if (!rd_str(dst, cap)) break;
 		} else if (!skip(t)) {
 			break;
 		}
+	}
+	if (want_ctx) {
+		if (!ctx) return 1;
+		printf("%llu\n", (unsigned long long)ctx);
+		return 0;
 	}
 	if (*base && (!*name || strlen(name) > 28))
 		printf("%s%s%s\n", base, *size ? " " : "", size);

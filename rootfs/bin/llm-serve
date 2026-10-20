@@ -11,6 +11,11 @@ PIN=; [ -n "$CPUS" ] && PIN="taskset -c $CPUS"
 # the model's own name (GGUF metadata): the server's model id, and llm-ui shows it
 NAME=$(gguf-name $M); NAME=${NAME:-model}
 echo "$NAME" > /tmp/model.name
+# no CTX: the model's trained context length, capped at CTX_MAX
+if [ -z "$CTX" ]; then
+	CTX=$(gguf-name -c $M); CTX=${CTX:-4096}
+	[ "$CTX" -gt "$CTX_MAX" ] && CTX=$CTX_MAX
+fi
 echo "llm-serve: $M threads=$THREADS cpus=${CPUS:-any} ctx=$CTX"
 setsid $PIN llama serve -m $M --host 0.0.0.0 --port 8080 --alias "$NAME" \
 	-t "$THREADS" -c "$CTX" $SERVER_ARGS > /tmp/llama-server.log 2>&1 < /dev/null &

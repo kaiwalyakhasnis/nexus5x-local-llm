@@ -28,6 +28,14 @@ GRSurface* MinuiBackendFbdev::Flip() {
 }
 MinuiBackendFbdev::~MinuiBackendFbdev() {}
 
+// voice.cpp (tinyalsa) is not linked on the host either: a fixed exchange.
+static VoiceView g_voice;
+void voice_init() {}
+void voice_press() {}
+void voice_release() {}
+void voice_set_sound(bool) {}
+VoiceView voice_view() { return g_voice; }
+
 // events.cpp is not linked on the host; the preview never reads input.
 int ev_init(ev_callback, bool) { return 0; }
 int ev_get_input(int, uint32_t, input_event*) { return -1; }
@@ -45,10 +53,31 @@ int main(int argc, char** argv) {
   s.status = state == "ready" ? "ready" : state == "loading" ? "loading model..." :
              state == "receiving" ? "receiving model... 212 MB" : "waiting for a model";
   s.color = state == "ready" ? 2 : state == "none" ? 0 : 1;
+  s.battery = 97;
+  s.cpu = 87;
+  s.mem_used = 63;
+  s.charging = state == "receiving";
   if (state == "none") {
     s.model = "";
     s.hint = "load one from the Nexus 5X LLM app on the PC";
   }
+  g_voice.available = state != "novoice";
+  if (state == "ready") {
+    g_voice.question = "What is the tallest mountain in Japan?";
+    g_voice.answer = "The tallest mountain in Japan is Mount Fuji, at 3,776 meters. It is an active "
+                     "volcano about 100 kilometers southwest of Tokyo.";
+    g_voice.turn = 3;
+    g_voice.ctx_used = 412;
+    g_voice.ctx_max = 32768;
+  } else if (state == "speaking") {
+    g_voice.phase = "speaking...";
+    g_voice.sound = true;
+    g_voice.question = "Tell me a fun fact about octopuses.";
+    g_voice.answer = "An octopus has three hearts and blue blood.";
+    s.status = "ready";
+    s.color = 2;
+  }
+  s.voice = voice_view();
   draw(s);
   return 0;
 }

@@ -3,5 +3,7 @@
 ::respawn:/bin/llmd
 ::respawn:/bin/llm-ui
 ::respawn:/bin/telnetd -F -l /bin/sh
+# voice conversations and status for the PC app (written by llm-ui)
+::respawn:/bin/httpd -f -p 8081 -h /tmp/www
 ::restart:/bin/init
 ::ctrlaltdel:/bin/reboot

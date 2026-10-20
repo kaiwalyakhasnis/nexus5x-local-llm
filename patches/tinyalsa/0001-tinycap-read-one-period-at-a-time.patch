@@ -1,0 +1,35 @@
+diff --git a/utils/tinycap.c b/utils/tinycap.c
+index 7d4b8a4..ae62ba2 100644
+--- a/utils/tinycap.c
++++ b/utils/tinycap.c
+@@ -222,7 +222,9 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
+     config.period_count = period_count;
+     config.format = format;
+     config.start_threshold = 0;
+-    config.stop_threshold = 0;
++    /* Never stop on an overrun, as Android's audio HAL: msm-pcm-q6-v2 does not
++     * recover from the stop/restart (it keeps returning stale buffers). */
++    config.stop_threshold = INT_MAX;
+     config.silence_threshold = 0;
+ 
+     pcm = pcm_open(card, device, PCM_IN, &config);
+@@ -232,7 +234,9 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
+         return 0;
+     }
+ 
+-    size = pcm_frames_to_bytes(pcm, pcm_get_buffer_size(pcm));
++    /* One period per read: Qualcomm's DSP PCM driver (msm-pcm-q6-v2) copies one
++     * DSP buffer per call whatever the size asked, leaving the rest stale. */
++    size = pcm_frames_to_bytes(pcm, period_size);
+     buffer = malloc(size);
+     if (!buffer) {
+         fprintf(stderr, "Unable to allocate %u bytes\n", size);
+@@ -249,7 +253,7 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
+     total_frames_read = 0;
+     frames_read = 0;
+     while (capturing) {
+-        frames_read = pcm_readi(pcm, buffer, pcm_get_buffer_size(pcm));
++        frames_read = pcm_readi(pcm, buffer, period_size);
+         total_frames_read += frames_read;
+         if ((total_frames_read / rate) >= capture_time) {
+             capturing = 0;
