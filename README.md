@@ -91,7 +91,12 @@ Steps:
    answer to stop it.
 6. **On a mobile** (app only): tick *Share the chat on Wi-Fi* in the app and
    scan the QR code. Anyone on that network can use the chat while it is on.
-7. **Back to Android**: hold power for ~10 s, or
+7. **Answers as screens** (optional): `scripts/a2ui-phone.sh` puts the
+   [A2UI screen](a2ui/README.md) on the phone in place of the usual one; it
+   downloads the prebuilt screen from the release, nothing to build. Hold
+   **VOLUME UP** to ask. Run it again after every boot;
+   `scripts/a2ui-phone.sh --back` brings the usual screen back.
+8. **Back to Android**: hold power for ~10 s, or
    `scripts/phone.py llm-reboot`. Nothing on the phone changed.
 
 The model and the voice pack live in RAM, so after a reboot load the model

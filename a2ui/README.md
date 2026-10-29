@@ -79,16 +79,30 @@ The phone has no touch here (this project's kernel leaves it out): hold
 time and then moves between the buttons (after the last one, back to the
 top), **POWER** presses.
 
-## Building and running
+## Running it
 
-From the top of this repo, with embedded-compose and embedded-compose-a2ui
-checked out next to it (or `EMBEDDED_COMPOSE=` and `EC_A2UI=` in
-`local.env`), the phone booted with a model and the voice pack loaded:
+From the top of this repo, the phone booted with a model loaded (and the
+voice pack, for asking by voice):
+
+```sh
+scripts/a2ui-phone.sh          # into the phone's RAM, in place of llm-ui
+scripts/a2ui-phone.sh --back   # llm-ui again
+```
+
+Without a build of your own, `a2ui-phone.sh` downloads the prebuilt screen
+(`nexus5x-llm-a2ui.zip`, from the latest
+[release](https://github.com/kaiwalyakhasnis/nexus5x-local-llm/releases/latest))
+into `out/a2ui/`: nothing to build or install. Like the model, it lives in
+RAM: run it again after every boot.
+
+## Building from source
+
+With embedded-compose and embedded-compose-a2ui checked out next to this
+repo (or `EMBEDDED_COMPOSE=` and `EC_A2UI=` in `local.env`):
 
 ```sh
 scripts/build-a2ui.sh          # APP_DIR=a2ui ./ec binary nexus5x, in embedded-compose
-scripts/a2ui-phone.sh          # into the phone's RAM, in place of llm-ui
-scripts/a2ui-phone.sh --back   # llm-ui again
+scripts/a2ui-phone.sh          # then as above: it takes your build from out/a2ui/
 ```
 
 The binary is one static executable (3.9 MB); it also needs Roboto in
