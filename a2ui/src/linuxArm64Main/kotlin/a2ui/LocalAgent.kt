@@ -249,6 +249,9 @@ internal class LocalAgent(private val http: Http) {
     }
 }
 
+/** JSON a model meant to close a string with, kept as text: a quote (often a curly one), then } ] ) , { */
+private val JSON_TAIL = Regex("[\"\u201d]\\s*[}\\])]+[\\s,{\\[]*$")
+
 /**
  * The model's compact screen as A2UI components: ids from each component's
  * place in the screen (so they stay the same while the screen is still
@@ -270,7 +273,7 @@ private class Builder {
     private fun text(o: Json.Obj, key: String): String? = o[key].string?.let { clean(it) }?.ifEmpty { null }
 
     private fun clean(s: String) = s.replace("\",\"", " ").replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'")
-        .replace("&lt;", "<").replace("&gt;", ">").trim().trimEnd('"', ',', ' ').trimStart('"', ' ')
+        .replace("&lt;", "<").replace("&gt;", ">").replace(JSON_TAIL, "").trim().trimEnd('"', ',', ' ').trimStart('"', ' ')
 
     private fun comp(id: String, type: String, vararg props: Pair<String, Json?>) =
         Json.obj("id" to Json.str(id), "component" to Json.str(type), *props)
