@@ -232,6 +232,30 @@ Gemma, Qwen, Llama (Meta), SmolLM (Hugging Face), DeepSeek, else Ollama's
 llama. When a new model starts arriving, `llmd` frees the old one first: two
 don't fit in RAM.
 
+## A2UI screens (optional)
+
+[`a2ui/`](a2ui/README.md) is another screen for the phone: ask a question
+(hold VOLUME UP, or send it from the PC) and the model answers with a
+*screen*, written in [A2UI](https://a2ui.org) (Google's Agent-to-User
+Interface protocol) and drawn as Material 3 components: cards, chips,
+sliders, and the questions you might ask next as buttons. VOLUME DOWN reads
+through the answer, then moves between the buttons; POWER presses.
+
+It is written in Kotlin with
+[embedded-compose](https://github.com/kaiwalyakhasnis/embedded-compose)
+(Jetpack Compose's runtime on minui) and
+[embedded-compose-a2ui](https://github.com/kaiwalyakhasnis/embedded-compose-a2ui)
+(the A2UI renderer), so it needs checkouts of both, next to this repo (or
+`EMBEDDED_COMPOSE=` and `EC_A2UI=` in `local.env`). It isn't in the boot
+image: it goes into the running phone's RAM, in place of `llm-ui`.
+
+```sh
+scripts/build-a2ui.sh          # out/a2ui/: the binary and its fonts
+scripts/a2ui-phone.sh          # run it on the phone instead of llm-ui (again after a rebuild)
+scripts/a2ui-phone.sh --back   # back to llm-ui (so does a reboot)
+echo 'what is DNS' | nc -N 172.16.42.1 8082   # ask from the PC
+```
+
 ## How it is built
 
 - **Kernel**: LineageOS's bullhead kernel (`lineage-15.1`, 3.10) plus the
