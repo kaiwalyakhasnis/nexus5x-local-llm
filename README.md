@@ -13,6 +13,15 @@ flashed, and the phone's Android is untouched.
 
 <sub>The phone's own screen (captured from its framebuffer): waiting for a model, receiving one over USB, ready.</sub>
 
+**Answers as screens** ([A2UI](#a2ui-screens-optional), optional; Gemma 3 1B): ask what system calls are, read the answer with the volume key, then press one of the suggested questions:
+
+<p align="center"><img src="docs/media/a2ui-chat.gif" width="360" alt="The A2UI screen: 'what are system calls in linux kernel' asked, Gemma 3 1B writes a titled answer with paragraphs and a card for open(), VOLUME DOWN scrolls through it and focuses the suggested questions, POWER asks 'What are some common system call examples?', and the next answer appears with its own suggestions"></p>
+
+<sub>Captured from the phone's framebuffer. While the model writes, the GIF runs 16 times faster (marked 16x):
+each answer took about 3 minutes on the phone; the key presses are real time. The answers are the model's,
+unedited, glitches included (the stray `")},{` after the first paragraph, which the app now removes, and the
+cut-off `open(` example).</sub>
+
 **Voice chat on the phone** (Gemma 3 1B, real time; three questions in one conversation):
 
 <p align="center"><img src="docs/media/voice-chat.gif" width="360" alt="The phone's screen during voice chat: listening, transcribing, thinking, answering and speaking, for 'Which mountain is the tallest in Japan?', then 'How tall is it?' and 'Is it a volcano?', answered in context"></p>
