@@ -54,33 +54,55 @@ Steps:
 
    A few seconds later the phone shows *waiting for a model*, and a new USB
    network interface comes up on the PC.
-3. **Start the PC app**: clone this repo, then
+3. **Load a model**: clone this repo, then use either the app or the script
+   (`gemma3:1b` is a good first model; 1 GB takes about a minute over USB).
 
-   ```sh
-   python3 manager/nexus5x-llm.py --install   # once: adds "Nexus 5X LLM" to the app menu
-   python3 manager/nexus5x-llm.py             # or start it directly; opens http://localhost:8765
-   ```
+   - **The PC app** (optional, the easiest; it also handles the voice pack
+     and Wi-Fi sharing, steps 5 and 6):
 
-   Click **Download & load** next to a model (`gemma3:1b` is a good first
-   one), and wait for *ready*: a 1 GB model takes about a minute over USB.
-4. **Chat**: click **Open chat** (http://172.16.42.1:8080). For these small
-   models, open Settings → Tools in the chat and switch the built-in tools
-   off; otherwise the page sends tool definitions with every message and a
-   0.5B model answers with a made-up tool call.
-5. **Talk to it**: under *Voice on the phone*, click **Download voice pack**
-   once (53 MB, from the release; or build it). From then on the app sends
-   it to the phone after every boot. Then **hold VOLUME DOWN**, ask your
-   question, and let go: the answer appears on the phone's screen. The
-   sound is off after boot; **VOLUME UP** turns it on, and the phone speaks
-   its answers. Press VOLUME DOWN during an answer to stop it.
-6. **On a mobile**: tick *Share the chat on Wi-Fi* in the app and scan the
-   QR code. Anyone on that network can use the chat while it is on.
+     ```sh
+     python3 manager/nexus5x-llm.py --install   # once: adds "Nexus 5X LLM" to the app menu
+     python3 manager/nexus5x-llm.py             # or start it directly; opens http://localhost:8765
+     ```
+
+     Click **Download & load** next to a model and wait for *ready*.
+   - **Or the script**, no app needed:
+
+     ```sh
+     ollama pull gemma3:1b
+     scripts/send-model.sh gemma3:1b            # an Ollama model name, or any .gguf path
+     ```
+
+     It prints *server ready* when the chat is up.
+4. **Chat**: open http://172.16.42.1:8080 (in the app: **Open chat**). For
+   these small models, open Settings → Tools in the chat and switch the
+   built-in tools off; otherwise the page sends tool definitions with every
+   message and a 0.5B model answers with a made-up tool call.
+5. **Talk to it**: the phone needs the voice pack (53 MB, from the release;
+   or build it). In the app, click **Download voice pack** under *Voice on
+   the phone* once; from then on the app sends it after every boot. Without
+   the app, download `nexus5x-llm-voice-pack.tar` from
+   [Releases](https://github.com/kaiwalyakhasnis/nexus5x-local-llm/releases/latest)
+   and send it after every boot with
+   `nc -N 172.16.42.1 9000 < nexus5x-llm-voice-pack.tar`.
+   Then **hold VOLUME DOWN**, ask your question, and let go: the answer
+   appears on the phone's screen. The sound is off after boot; **VOLUME UP**
+   turns it on, and the phone speaks its answers. Press VOLUME DOWN during an
+   answer to stop it.
+6. **On a mobile** (app only): tick *Share the chat on Wi-Fi* in the app and
+   scan the QR code. Anyone on that network can use the chat while it is on.
 7. **Back to Android**: hold power for ~10 s, or
    `scripts/phone.py llm-reboot`. Nothing on the phone changed.
 
 The model and the voice pack live in RAM, so after a reboot load the model
-again (one click; the voice pack goes by itself). Any GGUF file works too,
-without Ollama: `scripts/send-model.sh model.gguf`.
+again as in step 3 (with the app, the voice pack goes by itself). On a PC
+without this repo, netcat is enough: `nc -N 172.16.42.1 9000 < model.gguf`
+(OpenBSD netcat; with the traditional one, `-q 1` instead of `-N`).
+
+Once the phone has a model, any Linux PC works with nothing to install or
+run: plug it in, the phone gives the PC an address by DHCP over USB, and the
+chat is at http://172.16.42.1:8080 (Windows may need the RNDIS driver picked
+by hand; macOS needs a third-party one).
 
 ## Licenses and credits
 
